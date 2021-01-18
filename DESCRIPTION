@@ -1,5 +1,5 @@
 Package: topoclim
-Title: What the Package Does (One Line, Title Case)
+Title: Interpolation of Topoclimatic Air Temperature in Mountain Terrain
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Simon",
@@ -7,12 +7,13 @@ Authors@R:
            role = c("aut", "cre"),
            email = "sitscholl@eurac.edu",
            comment = c(ORCID = "https://orcid.org/0000-0002-0413-8504"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+Description: This package shows how to estimate topoclimatic conditions in complex mountain terrain.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 URL: https://github.com/sitscholl/topoclim
 BugReports: https://github.com/sitscholl/topoclim/issues
+Depends: 
+    R (>= 2.10)
