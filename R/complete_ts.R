@@ -4,8 +4,9 @@
 #'
 #' @param x data.frame with the columns st_id, month, h_clear and h_cloud
 #'
-#' @return data.frame
+#' @return
 #' @export
+#'
 
 complete_ts <- function(x) {
 
@@ -20,7 +21,8 @@ complete_ts <- function(x) {
   #generate a data.frame with the datesequence
   x_daily <- data.frame(date = dseq,
                         month = as.numeric(format(dseq, '%m')),
-                        day = as.numeric(format(dseq, '%d')))
+                        day = as.numeric(format(dseq, '%d')),
+                        jday = as.numeric(format(dseq, '%j')))
 
   #join the observed reference values
   x_daily <- merge(x_daily, x, by = c('month', 'day'), all.x = T)
