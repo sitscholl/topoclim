@@ -6,8 +6,9 @@
 #' @param new_data a raster file that defines the points for which predictions are needed
 #' @param formula a formula, for ordinary kriging use var ~ 1, where var equals the column name in x, where the observations are stored
 #'
-#' @return raster
+#' @return
 #' @export
+#'
 
 kriging <- function(x, new_data, formula) {
 
