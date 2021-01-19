@@ -7,8 +7,19 @@ output: github_document
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.path = "man/figures/readme-",
+  out.width = "100%"
 )
+
+latexImg = function(latex){
+
+    link = paste0('http://latex.codecogs.com/gif.latex?',
+           gsub('\\=','%3D',URLencode(latex)))
+
+    link = gsub("(%..)","\\U\\1",link,perl=TRUE)
+    return(paste0('![](',link,')'))
+}
 ```
 
 # topoclim
@@ -18,8 +29,202 @@ knitr::opts_chunk$set(
 
 ## Overview
 
-The goal of topoclim is to ...
+The goal of the package **topoclim** is to provide supplementary code and explanations for the article **XXX**. The present document describes the calculation of topoclimatic air temperature for every day during April 2019 within the mountaineous study area South Tyrol. In the present document, we included the code that was used to calculate the datasets presented in the article. The package also includes some datasets that allow everyone to run the present code.
 
 ## Installation
 
-## Usage
+You can install the package using:
+
+```{r eval = F}
+devtools::install_github('sitscholl/topoclim')
+```
+
+```{r}
+library(topoclim)
+library(raster)
+```
+
+## Included Datasets
+
+The topoclim package includes the following datasets:
+
+- **station_location:** A shapefile with the location of the official stations
+- **timeseries:** A table with daily measurements of mean temperature and solar irradiation from the official stations for the period 2017 until 2019
+- **rad_longterm:** A table with daily measurements of solar irradiation for seven stations for several years (up to 32 years)
+- `r latexImg('\\mathbf{H_{topo}}')`: Incoming solar irradiation for the study area for April with a resolution of 100m
+- `r latexImg('\\mathbf{H_{flat}}')`: Incoming solar irradiation for the study area using constant values of 0 for slope and aspect (e.g. on a flat surface) for April with a resolution of 100m
+- **dem:** A digital elevation model of the study area with a resolution of 100m
+
+`r latexImg('H_{topo}')` and `r latexImg('H_{flat}')` were both calculated using the [Solar Analyst in ArcGIS](https://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/area-solar-radiation.htm#), version 10.6.1. Two separate files were calculated for a single reference day for each month, for `r latexImg('H_{topo}')` we set the option `slope_aspect_input_type` to `FROM_DEM` and for `r latexImg('H_{flat}')` to `FLAT_SURFACE`. For model parameters and reference days, please check the associated article.
+
+*Incoming solar irradiation can also be calculated using open source software, for example `r.sun` in GRASS GIS.*
+
+The following code imports these datasets, and we can use them to calculate the topoclimatic air temperature.
+
+```{r load-data}
+data("station_location")
+data("timeseries")
+data("rad_longterm")
+h_topo <- raster( system.file('extdata', 'h_topo.tif', package = 'topoclim', mustWork = T) )
+h_flat <- raster( system.file('extdata', 'h_flat.tif', package = 'topoclim', mustWork = T) )
+dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim', mustWork = T) )
+```
+
+```{r h-topo-flat, echo = F, fig.cap = 'Incoming solar irradiation during April with and without consideration of aspect and slope.'}
+par(mfrow = c(1, 2))
+plot(h_topo, main = 'h_topo')
+plot(h_flat, main = 'h_flat')
+```
+
+## Calculating topoclimatic air temperature
+
+The following sections will illustrate the topoclimate model step-by-step. First, the calculation of the *relative radiation* is described, followed by the *cloud index*, the *radiation correction factor*, the *lapse-rate model* and, finally, the *topoclimatic air temperature*.
+
+`r knitr::include_graphics('man/figures/flowchart.png')`
+
+### Relative Radiation
+
+The relative radiation is defined as the ratio between incoming solar irradiation on an inclined and flat surface:
+
+`r latexImg('\\Delta_{rad} = \\frac{H_{topo}}{H_{flat}}')`
+
+We can therefore calculate `r latexImg('\\Delta_{rad}')` by dividing the raster objects `h_topo` and `h_flat`. Because `h_flat` contains some unrealistic jumps in pixel values on ridges and mountain tops, it is first smoothed using a 5x5 pixel filter.
+
+```{r d-rad-calc}
+h_flat2 <- focal(h_flat, w = matrix(1, 5, 5), fun = mean)
+d_rad <- h_topo / h_flat2
+```
+
+```{r d-rad, echo = F, fig.cap = 'Relative radiation during April.'}
+plot(d_rad, main = 'd_rad')
+```
+
+### Cloud Index
+
+The cloud index $c$ can be calculated using the following formula:
+
+`r latexImg('c = \\frac{H_{obs} - H_{cloud}}{H_{clear} - H_{cloud}}')`
+
+The first step is to calculate monthly reference values for maximum and minimum solar irradiation (`r latexImg('H_{clear}')` and `r latexImg('H_{cloud}')`). `r latexImg('H_{clear}')` is defined as the mean of all irradiation measurements above the 95% quantile and `r latexImg('H_{cloud}')` as the mean of all irradiation measurements below the 95% quantile. Outliers were already removed from this dataset, using a 3-sigma test.
+
+```{r}
+h_clear_monthly <- aggregate(list(h_clear = rad_longterm$irradiation),
+                             by = rad_longterm[c('st_id', 'month')],
+                             FUN = function(x){
+                               mean(x[x >= quantile(x, .95, na.rm = T)], na.rm = T)
+                             })
+
+h_cloud_monthly <- aggregate(list(h_cloud = rad_longterm$irradiation),
+                             by = rad_longterm[c('st_id', 'month')],
+                             FUN = function(x){
+                               mean(x[x <= quantile(x, .05, na.rm = T)], na.rm = T)
+                             })
+h_ref_month <- merge(h_clear_monthly, h_cloud_monthly, by = c('st_id', 'month'))
+```
+
+From the monthly reference values, the daily reference values are estimated via linear interpolation for every station. This can be accomplished using the function `complete_ts()`, which is included in this package.
+
+```{r}
+h_ref_split <- split(h_ref_month, h_ref_month$st_id)
+
+h_ref <- lapply(h_ref_split, complete_ts)
+h_ref <- do.call(rbind, h_ref)
+```
+
+Because there are only small differences for `r latexImg('H_{clear}')` and `r latexImg('H_{cloud}')` between the single stations, the average values across all stations is used to calculate the cloud index:
+
+```{r h-reference}
+h_ref <- aggregate(h_ref[c('h_clear', 'h_cloud')],
+                   by = h_ref[c('day', 'month')],
+                   FUN = mean)
+```
+
+`r latexImg('H_{obs}')` is calculated by using ordinary kriging together with the observed irradiation from all the official stations.
+
+```{r kriging}
+timeseries_sub <- subset(timeseries, date %in% seq.Date(as.Date('2019-04-01'), as.Date('2019-04-30'), by = 'day'))
+timeseries_split <- split(timeseries_sub, timeseries_sub$date)
+
+krige_split <- lapply(timeseries_split, merge, x = station_location, by = 'st_id', all.y = T)
+
+# h_obs <- lapply(krige_split, kriging, new_data = dem, formula = irradiation ~ 1)
+# h_obs <- stack(h_obs)
+# 
+# #kriging can produce negative radiation values
+# h_obs[h_obs < 0] <- 0
+
+# writeRaster(h_obs, 'cache/h_obs.tif')
+
+h_obs <- stack('cache/h_obs.tif')
+names(h_obs) <- names(krige_split)
+```
+
+In the last step, the cloud index is computed. In the present example, we only consider the month of April.
+
+```{r cloud-index-calc}
+h_ref_sub <- subset(h_ref, month == 4)
+
+c <- (h_obs - h_ref_sub$h_cloud) / (h_ref_sub$h_clear - h_ref_sub$h_cloud)
+
+##Standardize to range 0-1
+c[c < 0] <- 0
+c[c > 1] <- 1
+
+names(c) <- names(krige_split)
+```
+
+```{r cloud-index,echo=F, fig.cap = 'The cloud index for four example days during April 2019.'}
+plot(c[[1:4]])
+```
+
+### Radiation correction factor
+
+The relative radiation and the cloud index are both combined to the radiation correction factor:
+
+`r latexImg('\\delta_{rad} = \\begin{cases} 1 + ((\\Delta_{rad} - 1)c), & \\Delta_{rad} \\geq 1 \\\\ 1 - ((1 - \\Delta_{rad})c), & \\Delta_{rad} < 1 \\\\ \\end{cases}')`
+
+```{r calculate-rcf}
+rcf <- 
+  (d_rad >= 1) * (1 + ((d_rad - 1) * c)) +
+  (d_rad <  1) * (1 - ((1 - d_rad) * c))
+```
+
+```{r rcf,echo=F, fig.cap = 'The radiation correction factor for four example days during April 2019.'}
+plot(rcf[[1:4]])
+```
+
+### Lapse-rate model
+
+The lapse-rate model is a simple linear regression with elevation as explanatory and air temperature as dependent variable. Because it does not consider slope or aspect of a surface, the predictions from the lapse-rate model describe the air temperature of a flat surface across different elevation levels.
+
+```{r lapse-rate-model}
+#join elevation column
+lr_split <- lapply(timeseries_split, merge, station_location@data, by = 'st_id')
+#train linear models
+lr_fit <- lapply(lr_split, lm, formula = tmean ~ elev)
+
+names(dem) <- 'elev'
+
+#predict
+t_flat <- lapply(lr_fit, predict, object = dem)
+t_flat <- stack(t_flat)
+```
+
+```{r t_flat,echo=F, fig.cap = 'Predictions from the lapse-rate model for four example days during April 2019.'}
+plot(t_flat[[1:4]])
+```
+
+### Topoclima
+
+Topoclimatic air temperature is calculated by combining the predictions from the lapse-rate model with the radiation correction factor, using the following formula:
+
+`r latexImg('T_{topo} = T_{flat} + ((\\delta_{rad} - 1) * m_{rad} * |T_{flat}|)')`
+
+```{r calculate-topoclim}
+topoclim <- t_flat + ((rcf - 1) * 0.93 * abs(t_flat))
+```
+
+```{r topoclim,echo=F, fig.cap='Topoclimatic air temperature for four example days during April 2019.'}
+names(topoclim) <- names(krige_split)
+plot(topoclim[[1:4]])
+```
