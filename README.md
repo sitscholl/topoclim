@@ -168,7 +168,8 @@ h_ref_month <- merge(h_clear_monthly, h_cloud_monthly, by = c('st_id', 'month'))
 From the monthly reference values, the daily reference values are
 estimated via linear interpolation for every station. This can be
 accomplished using the function `complete_ts()`, which is included in
-this package.
+this package. Internally, the function uses the function
+`na_interpolation()` from the package `imputeTS`.
 
 ``` r
 h_ref_split <- split(h_ref_month, h_ref_month$st_id)
@@ -194,7 +195,9 @@ h_ref <- aggregate(h_ref[c('h_clear', 'h_cloud')],
 
 ![](http://latex.codecogs.com/gif.latex?H_%7Bobs%7D) is calculated by
 using ordinary kriging together with the observed irradiation from all
-the official stations.
+the official stations. The function `kriging()`, which is included in
+this package, performs the ordinary kriging and returns a raster dataset
+with interpolated values.
 
 ``` r
 timeseries_sub <- subset(timeseries, date %in% seq.Date(as.Date('2019-04-01'), as.Date('2019-04-30'), by = 'day'))
@@ -215,7 +218,11 @@ names(h_obs) <- names(krige_split)
 ```
 
 In the last step, the cloud index is computed. In the present example,
-we only consider the month of April.
+we only consider the month of April. There can be some pixels, where the
+interpolated value `h_obs` is higher or lower than our reference values
+`h_clear` and `h_cloud`, respectively. This would lead to cloud index
+values above one or below zero. To avoid this, values above one are
+assigned a value of one, and values below zero a value of zero.
 
 ``` r
 h_ref_sub <- subset(h_ref, month == 4)
@@ -252,6 +259,8 @@ radiation correction factor:
 rcf <- 
   (d_rad >= 1) * (1 + ((d_rad - 1) * c)) +
   (d_rad <  1) * (1 - ((1 - d_rad) * c))
+
+names(rcf) <- names(krige_split)
 ```
 
 <div class="figure">
