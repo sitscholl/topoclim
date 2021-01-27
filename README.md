@@ -28,9 +28,7 @@ devtools::install_github('sitscholl/topoclim')
 ``` r
 library(topoclim)
 library(raster)
-#> Warning: package 'raster' was built under R version 4.0.3
 #> Loading required package: sp
-#> Warning: package 'sp' was built under R version 4.0.3
 ```
 
 ## Included Datasets

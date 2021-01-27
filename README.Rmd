@@ -39,7 +39,7 @@ You can install the package using:
 devtools::install_github('sitscholl/topoclim')
 ```
 
-```{r}
+```{r warning = F}
 library(topoclim)
 library(raster)
 ```
@@ -181,7 +181,9 @@ plot(c[[1:4]])
 
 The relative radiation and the cloud index are both combined to the radiation correction factor:
 
+
 `r latexImg('\\delta_{rad} = \\begin{cases} 1 + ((\\Delta_{rad} - 1)c), & \\Delta_{rad} \\geq 1 \\\\ 1 - ((1 - \\Delta_{rad})c), & \\Delta_{rad} < 1 \\\\ \\end{cases}')`
+
 
 ```{r calculate-rcf}
 rcf <- 
