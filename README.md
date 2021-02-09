@@ -237,9 +237,9 @@ names(c) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-cloud-index-1.png" alt="The cloud index for four example days during April 2019." width="100%" />
+<img src="man/figures/readme-cloud-index-1.png" alt="The cloud index for two example days during April 2019." width="100%" />
 <p class="caption">
-The cloud index for four example days during April 2019.
+The cloud index for two example days during April 2019.
 </p>
 
 </div>
@@ -261,9 +261,9 @@ names(rcf) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-rcf-1.png" alt="The radiation correction factor for four example days during April 2019." width="100%" />
+<img src="man/figures/readme-rcf-1.png" alt="The radiation correction factor for two example days during April 2019." width="100%" />
 <p class="caption">
-The radiation correction factor for four example days during April 2019.
+The radiation correction factor for two example days during April 2019.
 </p>
 
 </div>
@@ -291,9 +291,9 @@ t_flat <- stack(t_flat)
 
 <div class="figure">
 
-<img src="man/figures/readme-t_flat-1.png" alt="Predictions from the lapse-rate model for four example days during April 2019." width="100%" />
+<img src="man/figures/readme-t_flat-1.png" alt="Predictions from the lapse-rate model for two example days during April 2019." width="100%" />
 <p class="caption">
-Predictions from the lapse-rate model for four example days during April
+Predictions from the lapse-rate model for two example days during April
 2019.
 </p>
 
@@ -315,9 +315,9 @@ names(topoclim) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-topoclim-1.png" alt="Topoclimatic air temperature for four example days during April 2019." width="100%" />
+<img src="man/figures/readme-topoclim-1.png" alt="Topoclimatic air temperature for two example days during April 2019." width="100%" />
 <p class="caption">
-Topoclimatic air temperature for four example days during April 2019.
+Topoclimatic air temperature for two example days during April 2019.
 </p>
 
 </div>

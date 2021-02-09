@@ -24,7 +24,7 @@ latexImg = function(latex){
     return(paste0('![](',link,')'))
 }
 
-plot_days <- 1:4
+plot_days <- c(1, 4)
 ```
 
 # topoclim
@@ -175,7 +175,7 @@ names(h_obs) <- names(krige_split)
 ```
 
 ```{r echo = F}
-h_obs <- readRDS(here::here('cache/h_obs.rds'))
+h_obs <- stack('cache/h_obs.tif')
 names(h_obs) <- names(krige_split)
 ```
 
@@ -193,7 +193,7 @@ c[c > 1] <- 1
 names(c) <- names(krige_split)
 ```
 
-```{r cloud-index,echo=F, fig.cap = 'The cloud index for four example days during April 2019.'}
+```{r cloud-index,echo=F, fig.cap = 'The cloud index for two example days during April 2019.'}
 plot(mask(c[[plot_days]], dem))
 ```
 
@@ -213,7 +213,7 @@ rcf <-
 names(rcf) <- names(krige_split)
 ```
 
-```{r rcf,echo=F, fig.cap = 'The radiation correction factor for four example days during April 2019.'}
+```{r rcf,echo=F, fig.cap = 'The radiation correction factor for two example days during April 2019.'}
 plot(rcf[[plot_days]])
 ```
 
@@ -234,7 +234,7 @@ t_flat <- lapply(lr_fit, predict, object = dem)
 t_flat <- stack(t_flat)
 ```
 
-```{r t_flat,echo=F, fig.cap = 'Predictions from the lapse-rate model for four example days during April 2019.'}
+```{r t_flat,echo=F, fig.cap = 'Predictions from the lapse-rate model for two example days during April 2019.'}
 plot(t_flat[[plot_days]])
 ```
 
@@ -250,6 +250,6 @@ topoclim <- t_flat + ((rcf - 1) * 0.93 * abs(t_flat))
 names(topoclim) <- names(krige_split)
 ```
 
-```{r topoclim,echo=F, fig.cap='Topoclimatic air temperature for four example days during April 2019.'}
+```{r topoclim,echo=F, fig.cap='Topoclimatic air temperature for two example days during April 2019.'}
 plot(topoclim[[plot_days]])
 ```
