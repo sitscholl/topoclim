@@ -1,5 +1,8 @@
 ---
-output: github_document
+output: 
+  github_document:
+    toc: true
+    toc_depth: 2
 ---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
@@ -20,16 +23,15 @@ latexImg = function(latex){
     link = gsub("(%..)","\\U\\1",link,perl=TRUE)
     return(paste0('![](',link,')'))
 }
+
+plot_days <- 1:4
 ```
 
 # topoclim
 
-<!-- badges: start -->
-<!-- badges: end -->
-
 ## Overview
 
-The goal of the package **topoclim** is to provide supplementary code and explanations for the article **XXX**. The present document describes the calculation of topoclimatic air temperature for every day during April 2019 within the mountaineous study area South Tyrol. In the present document, we included the code that was used to calculate the datasets presented in the article. The package also includes some datasets that allow everyone to run the present code.
+The goal of the package **topoclim** is to provide supplementary code and explanations for the article **XXX**. We included the code that was used to calculate the results presented in the article, together with datasets that allow everyone to run the present code. This document describes the calculation of daily topoclimatic air temperature during April 2019 for South Tyrol. 
 
 ## Installation
 
@@ -57,17 +59,15 @@ The topoclim package includes the following datasets:
 
 `r latexImg('H_{topo}')` and `r latexImg('H_{flat}')` were both calculated using the [Solar Analyst in ArcGIS](https://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/area-solar-radiation.htm#), version 10.6.1. Two separate files were calculated for a single reference day for each month, for `r latexImg('H_{topo}')` we set the option `slope_aspect_input_type` to `FROM_DEM` and for `r latexImg('H_{flat}')` to `FLAT_SURFACE`. For model parameters and reference days, please check the associated article.
 
-*Incoming solar irradiation can also be calculated using open source software, for example `r.sun` in GRASS GIS.*
-
 The following code imports these datasets, and we can use them to calculate the topoclimatic air temperature.
 
 ```{r load-data}
 data("station_location")
 data("timeseries")
 data("rad_longterm")
-h_topo <- raster( system.file('extdata', 'h_topo.tif', package = 'topoclim', mustWork = T) )
-h_flat <- raster( system.file('extdata', 'h_flat.tif', package = 'topoclim', mustWork = T) )
-dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim', mustWork = T) )
+h_topo <- raster( system.file('extdata', 'h_topo.tif', package = 'topoclim') )
+h_flat <- raster( system.file('extdata', 'h_flat.tif', package = 'topoclim') )
+dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim') )
 ```
 
 ```{r h-topo-flat, echo = F, fig.cap = 'Incoming solar irradiation during April with and without consideration of aspect and slope.'}
@@ -124,7 +124,7 @@ h_ref_month <- merge(h_clear_monthly, h_cloud_monthly, by = c('st_id', 'month'))
 
 From the monthly reference values, the daily reference values are estimated via linear interpolation for every station. This can be accomplished using the function `complete_ts()`, which is included in this package. Internally, the function uses the function `na_interpolation()` from the package `imputeTS`.
 
-```{r}
+```{r message = F}
 h_ref_split <- split(h_ref_month, h_ref_month$st_id)
 
 h_ref <- lapply(h_ref_split, complete_ts)
@@ -139,23 +139,43 @@ h_ref <- aggregate(h_ref[c('h_clear', 'h_cloud')],
                    FUN = mean)
 ```
 
-`r latexImg('H_{obs}')` is calculated by using ordinary kriging together with the observed irradiation from all the official stations. The function `kriging()`, which is included in this package, performs the ordinary kriging and returns a raster dataset with interpolated values.
+`r latexImg('H_{obs}')` is calculated by using ordinary kriging together with the observed irradiation from all the official stations. The packages `gstat` and `automap` are used to perform the kriging. This step can take some time to calculate (ca. 30s per day)
 
-```{r kriging}
+```{r include = F}
+# The code below can produce an error when the .rmd document is knitted due to some problems with the gstat and raster packages (see issue at https://github.com/r-spatial/gstat/issues/47). To avoid this error, run the code interactively in the console instead of knitting the document or use the cached results from the file h_obs.rds.
+```
+
+```{r}
 timeseries_sub <- subset(timeseries, date %in% seq.Date(as.Date('2019-04-01'), as.Date('2019-04-30'), by = 'day'))
 timeseries_split <- split(timeseries_sub, timeseries_sub$date)
 
 krige_split <- lapply(timeseries_split, merge, x = station_location, by = 'st_id', all.y = T)
+```
 
-# h_obs <- lapply(krige_split, kriging, new_data = dem, formula = irradiation ~ 1)
-# h_obs <- stack(h_obs)
-# 
-# #kriging can produce negative radiation values
-# h_obs[h_obs < 0] <- 0
+```{r kriging, eval = F}
+h_var <- lapply(krige_split, function(x) {
+  
+  var <- automap::autofitVariogram(formula = irradiation ~ 1,
+                                   input_data = x)
+  return(var$var_model)
+  
+})
 
-# writeRaster(h_obs, 'cache/h_obs.tif')
+h_fit <- mapply(gstat::gstat, data = krige_split, model = h_var,
+                MoreArgs = list(g = NULL, id = 'insol', formula = irradiation ~ 1),
+                SIMPLIFY = F)
 
-h_obs <- stack('cache/h_obs.tif')
+h_obs <- lapply(h_fit, raster::interpolate, object = dem)
+h_obs <- stack(h_obs)
+
+#kriging can produce negative radiation values
+h_obs[h_obs < 0] <- 0
+
+names(h_obs) <- names(krige_split)
+```
+
+```{r echo = F}
+h_obs <- readRDS(here::here('cache/h_obs.rds'))
 names(h_obs) <- names(krige_split)
 ```
 
@@ -174,7 +194,7 @@ names(c) <- names(krige_split)
 ```
 
 ```{r cloud-index,echo=F, fig.cap = 'The cloud index for four example days during April 2019.'}
-plot(c[[1:4]])
+plot(mask(c[[plot_days]], dem))
 ```
 
 ### Radiation correction factor
@@ -194,7 +214,7 @@ names(rcf) <- names(krige_split)
 ```
 
 ```{r rcf,echo=F, fig.cap = 'The radiation correction factor for four example days during April 2019.'}
-plot(rcf[[1:4]])
+plot(rcf[[plot_days]])
 ```
 
 ### Lapse-rate model
@@ -215,7 +235,7 @@ t_flat <- stack(t_flat)
 ```
 
 ```{r t_flat,echo=F, fig.cap = 'Predictions from the lapse-rate model for four example days during April 2019.'}
-plot(t_flat[[1:4]])
+plot(t_flat[[plot_days]])
 ```
 
 ### Topoclima
@@ -226,9 +246,10 @@ Topoclimatic air temperature is calculated by combining the predictions from the
 
 ```{r calculate-topoclim}
 topoclim <- t_flat + ((rcf - 1) * 0.93 * abs(t_flat))
+
+names(topoclim) <- names(krige_split)
 ```
 
 ```{r topoclim,echo=F, fig.cap='Topoclimatic air temperature for four example days during April 2019.'}
-names(topoclim) <- names(krige_split)
-plot(topoclim[[1:4]])
+plot(topoclim[[plot_days]])
 ```

@@ -1,21 +1,23 @@
 
+-   [topoclim](#topoclim)
+    -   [Overview](#overview)
+    -   [Installation](#installation)
+    -   [Included Datasets](#included-datasets)
+    -   [Calculating topoclimatic air
+        temperature](#calculating-topoclimatic-air-temperature)
+
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 # topoclim
 
-<!-- badges: start -->
-
-<!-- badges: end -->
-
 ## Overview
 
 The goal of the package **topoclim** is to provide supplementary code
-and explanations for the article **XXX**. The present document describes
-the calculation of topoclimatic air temperature for every day during
-April 2019 within the mountaineous study area South Tyrol. In the
-present document, we included the code that was used to calculate the
-datasets presented in the article. The package also includes some
-datasets that allow everyone to run the present code.
+and explanations for the article **XXX**. We included the code that was
+used to calculate the results presented in the article, together with
+datasets that allow everyone to run the present code. This document
+describes the calculation of daily topoclimatic air temperature during
+April 2019 for South Tyrol.
 
 ## Installation
 
@@ -35,21 +37,21 @@ library(raster)
 
 The topoclim package includes the following datasets:
 
-  - **station\_location:** A shapefile with the location of the official
+-   **station\_location:** A shapefile with the location of the official
     stations
-  - **timeseries:** A table with daily measurements of mean temperature
+-   **timeseries:** A table with daily measurements of mean temperature
     and solar irradiation from the official stations for the period 2017
     until 2019
-  - **rad\_longterm:** A table with daily measurements of solar
+-   **rad\_longterm:** A table with daily measurements of solar
     irradiation for seven stations for several years (up to 32 years)
-  - ![](http://latex.codecogs.com/gif.latex?%5Cmathbf%7BH_%7Btopo%7D%7D):
+-   ![](http://latex.codecogs.com/gif.latex?%5Cmathbf%7BH_%7Btopo%7D%7D):
     Incoming solar irradiation for the study area for April with a
     resolution of 100m
-  - ![](http://latex.codecogs.com/gif.latex?%5Cmathbf%7BH_%7Bflat%7D%7D):
+-   ![](http://latex.codecogs.com/gif.latex?%5Cmathbf%7BH_%7Bflat%7D%7D):
     Incoming solar irradiation for the study area using constant values
     of 0 for slope and aspect (e.g. on a flat surface) for April with a
     resolution of 100m
-  - **dem:** A digital elevation model of the study area with a
+-   **dem:** A digital elevation model of the study area with a
     resolution of 100m
 
 ![](http://latex.codecogs.com/gif.latex?H_%7Btopo%7D) and
@@ -64,9 +66,6 @@ reference day for each month, for
 For model parameters and reference days, please check the associated
 article.
 
-*Incoming solar irradiation can also be calculated using open source
-software, for example `r.sun` in GRASS GIS.*
-
 The following code imports these datasets, and we can use them to
 calculate the topoclimatic air temperature.
 
@@ -74,20 +73,17 @@ calculate the topoclimatic air temperature.
 data("station_location")
 data("timeseries")
 data("rad_longterm")
-h_topo <- raster( system.file('extdata', 'h_topo.tif', package = 'topoclim', mustWork = T) )
-h_flat <- raster( system.file('extdata', 'h_flat.tif', package = 'topoclim', mustWork = T) )
-dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim', mustWork = T) )
+h_topo <- raster( system.file('extdata', 'h_topo.tif', package = 'topoclim') )
+h_flat <- raster( system.file('extdata', 'h_flat.tif', package = 'topoclim') )
+dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim') )
 ```
 
 <div class="figure">
 
 <img src="man/figures/readme-h-topo-flat-1.png" alt="Incoming solar irradiation during April with and without consideration of aspect and slope." width="100%" />
-
 <p class="caption">
-
 Incoming solar irradiation during April with and without consideration
 of aspect and slope.
-
 </p>
 
 </div>
@@ -123,18 +119,15 @@ d_rad <- h_topo / h_flat2
 <div class="figure">
 
 <img src="man/figures/readme-d-rad-1.png" alt="Relative radiation during April." width="100%" />
-
 <p class="caption">
-
 Relative radiation during April.
-
 </p>
 
 </div>
 
 ### Cloud Index
 
-The cloud index \(c\) can be calculated using the following formula:
+The cloud index *c* can be calculated using the following formula:
 
 ![](http://latex.codecogs.com/gif.latex?c%20%3D%20%5Cfrac%7BH_%7Bobs%7D%20-%20H_%7Bcloud%7D%7D%7BH_%7Bclear%7D%20-%20H_%7Bcloud%7D%7D)
 
@@ -173,9 +166,6 @@ this package. Internally, the function uses the function
 h_ref_split <- split(h_ref_month, h_ref_month$st_id)
 
 h_ref <- lapply(h_ref_split, complete_ts)
-#> Registered S3 method overwritten by 'quantmod':
-#>   method            from
-#>   as.zoo.data.frame zoo
 h_ref <- do.call(rbind, h_ref)
 ```
 
@@ -193,25 +183,36 @@ h_ref <- aggregate(h_ref[c('h_clear', 'h_cloud')],
 
 ![](http://latex.codecogs.com/gif.latex?H_%7Bobs%7D) is calculated by
 using ordinary kriging together with the observed irradiation from all
-the official stations. The function `kriging()`, which is included in
-this package, performs the ordinary kriging and returns a raster dataset
-with interpolated values.
+the official stations. The packages `gstat` and `automap` are used to
+perform the kriging. This step can take some time to calculate (ca. 30s
+per day)
 
 ``` r
 timeseries_sub <- subset(timeseries, date %in% seq.Date(as.Date('2019-04-01'), as.Date('2019-04-30'), by = 'day'))
 timeseries_split <- split(timeseries_sub, timeseries_sub$date)
 
 krige_split <- lapply(timeseries_split, merge, x = station_location, by = 'st_id', all.y = T)
+```
 
-# h_obs <- lapply(krige_split, kriging, new_data = dem, formula = irradiation ~ 1)
-# h_obs <- stack(h_obs)
-# 
-# #kriging can produce negative radiation values
-# h_obs[h_obs < 0] <- 0
+``` r
+h_var <- lapply(krige_split, function(x) {
+  
+  var <- automap::autofitVariogram(formula = irradiation ~ 1,
+                                   input_data = x)
+  return(var$var_model)
+  
+})
 
-# writeRaster(h_obs, 'cache/h_obs.tif')
+h_fit <- mapply(gstat::gstat, data = krige_split, model = h_var,
+                MoreArgs = list(g = NULL, id = 'insol', formula = irradiation ~ 1),
+                SIMPLIFY = F)
 
-h_obs <- stack('cache/h_obs.tif')
+h_obs <- lapply(h_fit, raster::interpolate, object = dem)
+h_obs <- stack(h_obs)
+
+#kriging can produce negative radiation values
+h_obs[h_obs < 0] <- 0
+
 names(h_obs) <- names(krige_split)
 ```
 
@@ -237,11 +238,8 @@ names(c) <- names(krige_split)
 <div class="figure">
 
 <img src="man/figures/readme-cloud-index-1.png" alt="The cloud index for four example days during April 2019." width="100%" />
-
 <p class="caption">
-
 The cloud index for four example days during April 2019.
-
 </p>
 
 </div>
@@ -251,7 +249,7 @@ The cloud index for four example days during April 2019.
 The relative radiation and the cloud index are both combined to the
 radiation correction factor:
 
-![](http://latex.codecogs.com/gif.latex?%5Cdelta_%7Brad%7D%20%3D%20%5Cbegin%7Bcases%7D%201%20+%20\(\(%5CDelta_%7Brad%7D%20-%201\)c\),%20&%20%5CDelta_%7Brad%7D%20%5Cgeq%201%20%5C%5C%201%20-%20\(\(1%20-%20%5CDelta_%7Brad%7D\)c\),%20&%20%5CDelta_%7Brad%7D%20%3C%201%20%5C%5C%20%5Cend%7Bcases%7D)
+![](http://latex.codecogs.com/gif.latex?%5Cdelta_%7Brad%7D%20%3D%20%5Cbegin%7Bcases%7D%201%20+%20((%5CDelta_%7Brad%7D%20-%201)c),%20&%20%5CDelta_%7Brad%7D%20%5Cgeq%201%20%5C%5C%201%20-%20((1%20-%20%5CDelta_%7Brad%7D)c),%20&%20%5CDelta_%7Brad%7D%20%3C%201%20%5C%5C%20%5Cend%7Bcases%7D)
 
 ``` r
 rcf <- 
@@ -264,11 +262,8 @@ names(rcf) <- names(krige_split)
 <div class="figure">
 
 <img src="man/figures/readme-rcf-1.png" alt="The radiation correction factor for four example days during April 2019." width="100%" />
-
 <p class="caption">
-
 The radiation correction factor for four example days during April 2019.
-
 </p>
 
 </div>
@@ -297,12 +292,9 @@ t_flat <- stack(t_flat)
 <div class="figure">
 
 <img src="man/figures/readme-t_flat-1.png" alt="Predictions from the lapse-rate model for four example days during April 2019." width="100%" />
-
 <p class="caption">
-
 Predictions from the lapse-rate model for four example days during April
 2019.
-
 </p>
 
 </div>
@@ -313,20 +305,19 @@ Topoclimatic air temperature is calculated by combining the predictions
 from the lapse-rate model with the radiation correction factor, using
 the following formula:
 
-![](http://latex.codecogs.com/gif.latex?T_%7Btopo%7D%20%3D%20T_%7Bflat%7D%20+%20\(\(%5Cdelta_%7Brad%7D%20-%201\)%20*%20m_%7Brad%7D%20*%20%7CT_%7Bflat%7D%7C\))
+![](http://latex.codecogs.com/gif.latex?T_%7Btopo%7D%20%3D%20T_%7Bflat%7D%20+%20((%5Cdelta_%7Brad%7D%20-%201)%20*%20m_%7Brad%7D%20*%20%7CT_%7Bflat%7D%7C))
 
 ``` r
 topoclim <- t_flat + ((rcf - 1) * 0.93 * abs(t_flat))
+
+names(topoclim) <- names(krige_split)
 ```
 
 <div class="figure">
 
 <img src="man/figures/readme-topoclim-1.png" alt="Topoclimatic air temperature for four example days during April 2019." width="100%" />
-
 <p class="caption">
-
 Topoclimatic air temperature for four example days during April 2019.
-
 </p>
 
 </div>
