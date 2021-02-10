@@ -5,6 +5,11 @@
     -   [Included Datasets](#included-datasets)
     -   [Calculating topoclimatic air
         temperature](#calculating-topoclimatic-air-temperature)
+        -   [Relative Radiation](#relative-radiation)
+        -   [Cloud Index](#cloud-index)
+        -   [Radiation correction factor](#radiation-correction-factor)
+        -   [Lapse-rate model](#lapse-rate-model)
+        -   [Topoclima](#topoclima)
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
@@ -16,8 +21,11 @@ The goal of the package **topoclim** is to provide supplementary code
 and explanations for the article **XXX**. We included the code that was
 used to calculate the results presented in the article, together with
 datasets that allow everyone to run the present code. This document
-describes the calculation of daily topoclimatic air temperature during
-April 2019 for South Tyrol.
+describes the calculation of daily topoclimatic air temperature at the
+example of April 2019 for the study area South Tyrol. Additionally, we
+also provide the results from our validation, including the comparison
+between measured and modeled air temperature and the comparison between
+observed and modeled phenological timing.
 
 ## Installation
 
@@ -27,55 +35,76 @@ You can install the package using:
 devtools::install_github('sitscholl/topoclim')
 ```
 
+The following script also uses the `raster`, `gstat` and `automap`
+packages, which can be installed using the code below.
+
+``` r
+install.packages(c('raster', 'gstat', 'automap'))
+```
+
 ``` r
 library(topoclim)
 library(raster)
-#> Loading required package: sp
 ```
 
 ## Included Datasets
 
 The topoclim package includes the following datasets:
 
--   **station\_location:** A shapefile with the location of the official
-    stations
+-   **official\_stations:** A SpatialPointsDataFrame with the location
+    of the official stations
+-   **validation\_stations:** A SpatialPointsDataFrame with the location
+    of the validation stations
 -   **timeseries:** A table with daily measurements of mean temperature
     and solar irradiation from the official stations for the period 2017
     until 2019
 -   **rad\_longterm:** A table with daily measurements of solar
     irradiation for seven stations for several years (up to 32 years)
--   ![](http://latex.codecogs.com/gif.latex?%5Cmathbf%7BH_%7Btopo%7D%7D):
-    Incoming solar irradiation for the study area for April with a
+-   **h\_topo:** A RasterStack with incoming solar irradiation in kWh/m²
+    for the study area for a representative day for each month with a
     resolution of 100m
--   ![](http://latex.codecogs.com/gif.latex?%5Cmathbf%7BH_%7Bflat%7D%7D):
-    Incoming solar irradiation for the study area using constant values
-    of 0 for slope and aspect (e.g. on a flat surface) for April with a
-    resolution of 100m
+-   **h\_flat:** A RasterStack with incoming solar irradiation in kWh/m²
+    for the study area using constant values of 0 for slope and aspect
+    (e.g. on a flat surface) for a representative day for each month
+    with a resolution of 100m
 -   **dem:** A digital elevation model of the study area with a
     resolution of 100m
+-   **validation\_tair:** A DataFrame with measured air temperature from
+    the validation stations and modeled air temperature from the
+    lapse-rate and topoclimate models
+-   **validation\_phenology:** A DataFrame with data from the
+    phenological surveys (in the same vineyards where the validation
+    stations are located) and modeled phenological timing using measured
+    air temperature and modeled air temperature from the lapse-rate and
+    topoclimate models.
 
-![](http://latex.codecogs.com/gif.latex?H_%7Btopo%7D) and
-![](http://latex.codecogs.com/gif.latex?H_%7Bflat%7D) were both
-calculated using the [Solar Analyst in
-ArcGIS](https://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/area-solar-radiation.htm#),
-version 10.6.1. Two separate files were calculated for a single
-reference day for each month, for
-![](http://latex.codecogs.com/gif.latex?H_%7Btopo%7D) we set the option
-`slope_aspect_input_type` to `FROM_DEM` and for
-![](http://latex.codecogs.com/gif.latex?H_%7Bflat%7D) to `FLAT_SURFACE`.
-For model parameters and reference days, please check the associated
-article.
-
-The following code imports these datasets, and we can use them to
-calculate the topoclimatic air temperature.
+The following code imports some of these datasets that are used in the
+next steps for the topoclimate model.
 
 ``` r
-data("station_location")
+data("official_stations")
 data("timeseries")
 data("rad_longterm")
-h_topo <- raster( system.file('extdata', 'h_topo.tif', package = 'topoclim') )
-h_flat <- raster( system.file('extdata', 'h_flat.tif', package = 'topoclim') )
+h_topo <- stack( system.file('extdata', 'h_topo.tif', package = 'topoclim') )
+h_flat <- stack( system.file('extdata', 'h_flat.tif', package = 'topoclim') )
 dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim') )
+```
+
+**h\_topo** and **h\_flat** were both calculated using the [Solar
+Analyst in
+ArcGIS](https://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/area-solar-radiation.htm#),
+version 10.6.1. Two separate files were calculated for a single
+reference day for each month, for **h\_topo** we set the option
+`slope_aspect_input_type` to `FROM_DEM` and for **h\_flat** to
+`FLAT_SURFACE`. For model parameters and reference days, please check
+the associated article. For the present demonstration, we will only
+consider the month of April.
+
+``` r
+test_month <- 4
+
+h_topo <- h_topo[[test_month]]
+h_flat <- h_flat[[test_month]]
 ```
 
 <div class="figure">
@@ -139,7 +168,7 @@ minimum solar irradiation
 mean of all irradiation measurements above the 95% quantile and
 ![](http://latex.codecogs.com/gif.latex?H_%7Bcloud%7D) as the mean of
 all irradiation measurements below the 95% quantile. Outliers were
-already removed from this dataset, using a 3-sigma test.
+already removed from this dataset using a 3-sigma test.
 
 ``` r
 h_clear_monthly <- aggregate(list(h_clear = rad_longterm$irradiation),
@@ -188,10 +217,17 @@ perform the kriging. This step can take some time to calculate (ca. 30s
 per day)
 
 ``` r
-timeseries_sub <- subset(timeseries, date %in% seq.Date(as.Date('2019-04-01'), as.Date('2019-04-30'), by = 'day'))
+#Change the end day from 30 to 31 depending on the considered month
+dateseq <- seq.Date(as.Date('2019-01-01'), 
+                    as.Date('2019-12-31'), 
+                    by = 'day')
+dateseq_i <- which(as.numeric(format(dateseq, '%m')) == test_month)
+dateseq_sub <- dateseq[dateseq_i]
+
+timeseries_sub <- subset(timeseries, date %in% dateseq_sub)
 timeseries_split <- split(timeseries_sub, timeseries_sub$date)
 
-krige_split <- lapply(timeseries_split, merge, x = station_location, by = 'st_id', all.y = T)
+krige_split <- lapply(timeseries_split, merge, x = official_stations, by = 'st_id', all.y = T)
 ```
 
 ``` r
@@ -210,7 +246,7 @@ h_fit <- mapply(gstat::gstat, data = krige_split, model = h_var,
 h_obs <- lapply(h_fit, raster::interpolate, object = dem)
 h_obs <- stack(h_obs)
 
-#kriging can produce negative radiation values
+#kriging can produce negative radiation values for some pixels
 h_obs[h_obs < 0] <- 0
 
 names(h_obs) <- names(krige_split)
@@ -224,7 +260,7 @@ values above one or below zero. To avoid this, values above one are
 assigned a value of one, and values below zero a value of zero.
 
 ``` r
-h_ref_sub <- subset(h_ref, month == 4)
+h_ref_sub <- subset(h_ref, month == test_month)
 
 c <- (h_obs - h_ref_sub$h_cloud) / (h_ref_sub$h_clear - h_ref_sub$h_cloud)
 
@@ -278,7 +314,7 @@ different elevation levels.
 
 ``` r
 #join elevation column
-lr_split <- lapply(timeseries_split, merge, station_location@data, by = 'st_id')
+lr_split <- lapply(timeseries_split, merge, official_stations@data, by = 'st_id')
 #train linear models
 lr_fit <- lapply(lr_split, lm, formula = tmean ~ elev)
 
