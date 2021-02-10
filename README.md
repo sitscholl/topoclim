@@ -80,7 +80,7 @@ dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim') )
 
 <div class="figure">
 
-<img src="man/figures/readme-h-topo-flat-1.png" alt="Incoming solar irradiation during April with and without consideration of aspect and slope." width="100%" />
+<img src="man/figures/readme-h-topo-flat-1.png" alt="Incoming solar irradiation during April with and without consideration of aspect and slope." width="90%" />
 <p class="caption">
 Incoming solar irradiation during April with and without consideration
 of aspect and slope.
@@ -96,7 +96,7 @@ described, followed by the *cloud index*, the *radiation correction
 factor*, the *lapse-rate model* and, finally, the *topoclimatic air
 temperature*.
 
-<img src="man/figures/flowchart.png" width="100%" />
+<img src="man/figures/flowchart.png" width="90%" />
 
 ### Relative Radiation
 
@@ -118,7 +118,7 @@ d_rad <- h_topo / h_flat2
 
 <div class="figure">
 
-<img src="man/figures/readme-d-rad-1.png" alt="Relative radiation during April." width="100%" />
+<img src="man/figures/readme-d-rad-1.png" alt="Relative radiation during April." width="90%" />
 <p class="caption">
 Relative radiation during April.
 </p>
@@ -237,7 +237,7 @@ names(c) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-cloud-index-1.png" alt="The cloud index for two example days during April 2019." width="100%" />
+<img src="man/figures/readme-cloud-index-1.png" alt="The cloud index for two example days during April 2019." width="90%" />
 <p class="caption">
 The cloud index for two example days during April 2019.
 </p>
@@ -261,7 +261,7 @@ names(rcf) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-rcf-1.png" alt="The radiation correction factor for two example days during April 2019." width="100%" />
+<img src="man/figures/readme-rcf-1.png" alt="The radiation correction factor for two example days during April 2019." width="90%" />
 <p class="caption">
 The radiation correction factor for two example days during April 2019.
 </p>
@@ -291,7 +291,7 @@ t_flat <- stack(t_flat)
 
 <div class="figure">
 
-<img src="man/figures/readme-t_flat-1.png" alt="Predictions from the lapse-rate model for two example days during April 2019." width="100%" />
+<img src="man/figures/readme-t_flat-1.png" alt="Predictions from the lapse-rate model for two example days during April 2019." width="90%" />
 <p class="caption">
 Predictions from the lapse-rate model for two example days during April
 2019.
@@ -315,7 +315,7 @@ names(topoclim) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-topoclim-1.png" alt="Topoclimatic air temperature for two example days during April 2019." width="100%" />
+<img src="man/figures/readme-topoclim-1.png" alt="Topoclimatic air temperature for two example days during April 2019." width="90%" />
 <p class="caption">
 Topoclimatic air temperature for two example days during April 2019.
 </p>

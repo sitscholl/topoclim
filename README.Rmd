@@ -12,7 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   fig.path = "man/figures/readme-",
-  out.width = "100%"
+  out.width = "90%"
 )
 
 latexImg = function(latex){
