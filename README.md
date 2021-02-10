@@ -217,7 +217,6 @@ perform the kriging. This step can take some time to calculate (ca. 30s
 per day)
 
 ``` r
-#Change the end day from 30 to 31 depending on the considered month
 dateseq <- seq.Date(as.Date('2019-01-01'), 
                     as.Date('2019-12-31'), 
                     by = 'day')
