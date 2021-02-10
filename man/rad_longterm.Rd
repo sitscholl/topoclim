@@ -7,7 +7,7 @@
 \format{
 A data frame with 16425 rows and 4 variables:
 \describe{
-\item{st_id}{id of the station}
+\item{st_id}{id of the official stations}
 \item{date}{measurement date}
 \item{month}{measurement month}
 \item{irradiation}{daily solar irradiation in kWh/m2}
