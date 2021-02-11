@@ -1,6 +1,6 @@
-#' Table with daily observations from the official stations.
+#' Table with daily measurements from the official stations.
 #'
-#' A data.frame containing a column for station id, date, daily mean temperature and daily solar irradiation
+#' A data.frame with measurements from the official stations
 #'
 #' @format A data frame with 16425 rows and 4 variables:
 #' \describe{
@@ -11,11 +11,11 @@
 #' }
 "timeseries"
 
-#' Table with daily observations of solar irradiation for a long time period.
+#' Table with daily measurements of solar irradiation from the official stations
 #'
-#' A data.frame containing a column for station id, date and daily solar irradiation
+#' A data.frame containing measured solar irradiation from the official stations with a long timeseries of measurements
 #'
-#' @format A data frame with 16425 rows and 4 variables:
+#' @format A data frame with 35430 rows and 4 variables:
 #' \describe{
 #' \item{st_id}{id of the official stations}
 #' \item{date}{measurement date}
@@ -40,11 +40,11 @@
 #' }
 "validation_phenology"
 
-#' Table with validation data from the interpolation models and validation stations.
+#' Table with validation data from the validation stations.
 #'
-#' A data.frame containing a column for station id, date, measured air temperature from the validation stations and predictions from the lapse-rate and topoclimate models
+#' A data.frame containing a column for station id, date and measured air temperature from the validation stations as well as predictions from the lapse-rate and topoclimate models
 #'
-#' @format A data frame with 31755 rows and 5 variables:
+#' @format A data frame with 28470 rows and 5 variables:
 #' \describe{
 #' \item{st_id}{id of the validation stations}
 #' \item{date}{measurement date}
