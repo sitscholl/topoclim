@@ -31,9 +31,11 @@ plot_days <- c(1, 4)
 
 # topoclim
 
+[![DOI](https://zenodo.org/badge/330615224.svg)](https://zenodo.org/badge/latestdoi/330615224)
+
 ## Overview
 
-The goal of the package **topoclim** is to provide supplementary code and explanations for the article **XXX**. We included the code that was used to calculate the results presented in the article, together with datasets that allow everyone to run the present code. This document describes the calculation of daily topoclimatic air temperature at the example of April 2019 for the study area South Tyrol. Additionally, we also provide the results from our validation, including the comparison between measured and modeled air temperature and the comparison between observed and modeled phenological timing.
+This document describes the R-package **topoclim**. The document presents a series of calculations that allow to estimate fine-scale climatic conditions in complex topography using a radiation correction factor. Thereby, the effects of slope, aspect, cloud cover and solar position on local air temperature are accounted for. The principles of the approach are illustrated by applying it to South Tyrol, a mountaineous study area in the inner alps, during April 2019. The time-period for the interpolation can also be changed by adjusting the parameters in the following script. Additionally, we also provide the results from our validation, including the comparison between measured and modeled air temperature and the comparison between observed and modeled phenological timing as datasets in the package.
 
 ## Installation
 
@@ -68,7 +70,7 @@ The topoclim package includes the following datasets:
 - **validation_tair:** A DataFrame with measured air temperature from the validation stations and modeled air temperature from the lapse-rate and topoclimate models
 - **validation_phenology:** A DataFrame with data from the phenological surveys (in the same vineyards where the validation stations are located) and modeled phenological timing using measured air temperature and modeled air temperature from the lapse-rate and topoclimate models.
 
-The following code imports some of these datasets that are used in the next steps for the topoclimate model.
+Use the syntax `?DatasetName` (e.g. `?official_stations`) to get more information about a certain dataset. The following code imports some of these datasets, that are required for the topoclimate model.
 
 ```{r load-data}
 data("official_stations")
@@ -79,7 +81,7 @@ h_flat <- stack( system.file('extdata', 'h_flat.tif', package = 'topoclim') )
 dem <- raster( system.file('extdata', 'dem.tif', package = 'topoclim') )
 ```
 
-**h_topo** and **h_flat** were both calculated using the [Solar Analyst in ArcGIS](https://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/area-solar-radiation.htm#), version 10.6.1. Two separate files were calculated for a single reference day for each month, for **h_topo** we set the option `slope_aspect_input_type` to `FROM_DEM` and for **h_flat** to `FLAT_SURFACE`. For model parameters and reference days, please check the associated article. For the present demonstration, we will only consider the month of April.
+**h_topo** and **h_flat** were both calculated using the [Solar Analyst in ArcGIS](https://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/area-solar-radiation.htm#), version 10.6.1. Two separate files were calculated for a single reference day for each month, for **h_topo** we set the option `slope_aspect_input_type` to `FROM_DEM` and for **h_flat** to `FLAT_SURFACE`. For model parameters and reference days, please check the associated article. For the present demonstration, we will only consider the month of April in 2019, but other timeperiods can also be calculated by adjusting the parameters in the following script.
 
 ```{r}
 test_month <- 4
@@ -95,7 +97,7 @@ plot(h_topo, main = 'h_topo')
 plot(h_flat, main = 'h_flat')
 ```
 
-## Calculating topoclimatic air temperature
+## The topoclimate model
 
 The following sections will illustrate the topoclimate model step-by-step. First, the calculation of the *relative radiation* is described, followed by the *cloud index*, the *radiation correction factor*, the *lapse-rate model* and, finally, the *topoclimatic air temperature*.
 
@@ -269,8 +271,31 @@ Topoclimatic air temperature is calculated by combining the predictions from the
 
 `r latexImg('T_{topo} = T_{flat} + ((\\delta_{rad} - 1) * m_{rad} * |T_{flat}|)')`
 
+$m_{rad}$ is an empirical relationship between air temperature and incoming solar radiation and describes the change in local air temperature by an increase/decrease of incoming solar radiation. $m_{rad}$ is defined as the slope of the linear regression between observed air temperature and solar irradiation from the official stations with a long timeseries.
+
+```{r}
+rad_mean <- aggregate(list(rad_mean = rad_longterm$irradiation),
+                      by = rad_longterm['st_id'],
+                      FUN = mean, na.rm = T)
+tair_mean <- aggregate(list(tmean_mean = rad_longterm$tmean),
+                       by = rad_longterm['st_id'],
+                       FUN = mean, na.rm = T)
+
+perc_diff <- merge(rad_longterm, rad_mean, by = 'st_id', all.x = T)
+perc_diff <- merge(perc_diff, tair_mean, by = 'st_id', all.x = T)
+perc_diff$tmean_diff <- (perc_diff$tmean - perc_diff$tmean_mean) / perc_diff$tmean_mean
+perc_diff$rad_diff <- (perc_diff$irradiation - perc_diff$rad_mean) / perc_diff$rad_mean
+
+fit <- lm(tmean_diff ~ rad_diff, data = perc_diff)
+m_rad <- fit$coefficients['rad_diff']
+
+round(m_rad, 2)
+```
+
+$m_{rad}$ amounts to `r round(m_rad, 2)`, which means that a change of radiation by 1% changes local air temperature by 0.93%. Given this value, we can then calculate the final topoclimatic air temperature.
+
 ```{r calculate-topoclim}
-topoclim <- t_flat + ((rcf - 1) * 0.93 * abs(t_flat))
+topoclim <- t_flat + ((rcf - 1) * m_rad * abs(t_flat))
 
 names(topoclim) <- names(krige_split)
 ```

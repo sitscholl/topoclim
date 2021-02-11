@@ -3,8 +3,7 @@
     -   [Overview](#overview)
     -   [Installation](#installation)
     -   [Included Datasets](#included-datasets)
-    -   [Calculating topoclimatic air
-        temperature](#calculating-topoclimatic-air-temperature)
+    -   [The topoclimate model](#the-topoclimate-model)
         -   [Relative Radiation](#relative-radiation)
         -   [Cloud Index](#cloud-index)
         -   [Radiation correction factor](#radiation-correction-factor)
@@ -15,17 +14,22 @@
 
 # topoclim
 
+[![DOI](https://zenodo.org/badge/330615224.svg)](https://zenodo.org/badge/latestdoi/330615224)
+
 ## Overview
 
-The goal of the package **topoclim** is to provide supplementary code
-and explanations for the article **XXX**. We included the code that was
-used to calculate the results presented in the article, together with
-datasets that allow everyone to run the present code. This document
-describes the calculation of daily topoclimatic air temperature at the
-example of April 2019 for the study area South Tyrol. Additionally, we
-also provide the results from our validation, including the comparison
-between measured and modeled air temperature and the comparison between
-observed and modeled phenological timing.
+This document describes the R-package **topoclim**. The document
+presents a series of calculations that allow to estimate fine-scale
+climatic conditions in complex topography using a radiation correction
+factor. Thereby, the effects of slope, aspect, cloud cover and solar
+position on local air temperature are accounted for. The principles of
+the approach are illustrated by applying it to South Tyrol, a
+mountaineous study area in the inner alps, during April 2019. The
+time-period for the interpolation can also be changed by adjusting the
+parameters in the following script. Additionally, we also provide the
+results from our validation, including the comparison between measured
+and modeled air temperature and the comparison between observed and
+modeled phenological timing as datasets in the package.
 
 ## Installation
 
@@ -78,8 +82,9 @@ The topoclim package includes the following datasets:
     air temperature and modeled air temperature from the lapse-rate and
     topoclimate models.
 
-The following code imports some of these datasets that are used in the
-next steps for the topoclimate model.
+Use the syntax `?DatasetName` (e.g. `?official_stations`) to get more
+information about a certain dataset. The following code imports some of
+these datasets, that are required for the topoclimate model.
 
 ``` r
 data("official_stations")
@@ -98,7 +103,8 @@ reference day for each month, for **h\_topo** we set the option
 `slope_aspect_input_type` to `FROM_DEM` and for **h\_flat** to
 `FLAT_SURFACE`. For model parameters and reference days, please check
 the associated article. For the present demonstration, we will only
-consider the month of April.
+consider the month of April in 2019, but other timeperiods can also be
+calculated by adjusting the parameters in the following script.
 
 ``` r
 test_month <- 4
@@ -117,7 +123,7 @@ of aspect and slope.
 
 </div>
 
-## Calculating topoclimatic air temperature
+## The topoclimate model
 
 The following sections will illustrate the topoclimate model
 step-by-step. First, the calculation of the *relative radiation* is
@@ -342,8 +348,40 @@ the following formula:
 
 ![](http://latex.codecogs.com/gif.latex?T_%7Btopo%7D%20%3D%20T_%7Bflat%7D%20+%20((%5Cdelta_%7Brad%7D%20-%201)%20*%20m_%7Brad%7D%20*%20%7CT_%7Bflat%7D%7C))
 
+*m*<sub>*r**a**d*</sub> is an empirical relationship between air
+temperature and incoming solar radiation and describes the change in
+local air temperature by an increase/decrease of incoming solar
+radiation. *m*<sub>*r**a**d*</sub> is defined as the slope of the linear
+regression between observed air temperature and solar irradiation from
+the official stations with a long timeseries.
+
 ``` r
-topoclim <- t_flat + ((rcf - 1) * 0.93 * abs(t_flat))
+rad_mean <- aggregate(list(rad_mean = rad_longterm$irradiation),
+                      by = rad_longterm['st_id'],
+                      FUN = mean, na.rm = T)
+tair_mean <- aggregate(list(tmean_mean = rad_longterm$tmean),
+                       by = rad_longterm['st_id'],
+                       FUN = mean, na.rm = T)
+
+perc_diff <- merge(rad_longterm, rad_mean, by = 'st_id', all.x = T)
+perc_diff <- merge(perc_diff, tair_mean, by = 'st_id', all.x = T)
+perc_diff$tmean_diff <- (perc_diff$tmean - perc_diff$tmean_mean) / perc_diff$tmean_mean
+perc_diff$rad_diff <- (perc_diff$irradiation - perc_diff$rad_mean) / perc_diff$rad_mean
+
+fit <- lm(tmean_diff ~ rad_diff, data = perc_diff)
+m_rad <- fit$coefficients['rad_diff']
+
+round(m_rad, 2)
+#> rad_diff 
+#>     0.93
+```
+
+*m*<sub>*r**a**d*</sub> amounts to 0.93, which means that a change of
+radiation by 1% changes local air temperature by 0.93%. Given this
+value, we can then calculate the final topoclimatic air temperature.
+
+``` r
+topoclim <- t_flat + ((rcf - 1) * m_rad * abs(t_flat))
 
 names(topoclim) <- names(krige_split)
 ```
