@@ -3,7 +3,7 @@
 \docType{data}
 \name{timeseries}
 \alias{timeseries}
-\title{Table with daily observations from the official stations.}
+\title{Table with daily measurements from the official stations.}
 \format{
 A data frame with 16425 rows and 4 variables:
 \describe{
@@ -17,6 +17,6 @@ A data frame with 16425 rows and 4 variables:
 timeseries
 }
 \description{
-A data.frame containing a column for station id, date, daily mean temperature and daily solar irradiation
+A data.frame with measurements from the official stations
 }
 \keyword{datasets}

@@ -3,9 +3,9 @@
 \docType{data}
 \name{rad_longterm}
 \alias{rad_longterm}
-\title{Table with daily observations of solar irradiation for a long time period.}
+\title{Table with daily measurements of solar irradiation from the official stations}
 \format{
-A data frame with 16425 rows and 4 variables:
+A data frame with 35430 rows and 4 variables:
 \describe{
 \item{st_id}{id of the official stations}
 \item{date}{measurement date}
@@ -17,6 +17,6 @@ A data frame with 16425 rows and 4 variables:
 rad_longterm
 }
 \description{
-A data.frame containing a column for station id, date and daily solar irradiation
+A data.frame containing measured solar irradiation from the official stations with a long timeseries of measurements
 }
 \keyword{datasets}

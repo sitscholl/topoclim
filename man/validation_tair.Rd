@@ -3,9 +3,9 @@
 \docType{data}
 \name{validation_tair}
 \alias{validation_tair}
-\title{Table with validation data from the interpolation models and validation stations.}
+\title{Table with validation data from the validation stations.}
 \format{
-A data frame with 31755 rows and 5 variables:
+A data frame with 28470 rows and 5 variables:
 \describe{
 \item{st_id}{id of the validation stations}
 \item{date}{measurement date}
@@ -18,6 +18,6 @@ A data frame with 31755 rows and 5 variables:
 validation_tair
 }
 \description{
-A data.frame containing a column for station id, date, measured air temperature from the validation stations and predictions from the lapse-rate and topoclimate models
+A data.frame containing a column for station id, date and measured air temperature from the validation stations as well as predictions from the lapse-rate and topoclimate models
 }
 \keyword{datasets}
