@@ -7,20 +7,20 @@
 #' \item{st_id}{id of the official stations}
 #' \item{date}{measurement date}
 #' \item{tmean}{daily mean temperature in deg C}
-#' \item{irradiation}{daily solar irradiation in kWh/m2}
+#' \item{insolation}{daily solar insolation in kWh/m2}
 #' }
 "timeseries"
 
 #' Table with daily measurements from the official stations with a long timeseries
 #'
-#' A data.frame containing measured solar irradiation and air temperature from the official stations with a long timeseries of measurements
+#' A data.frame containing measured solar insolation and air temperature from the official stations with a long timeseries of measurements
 #'
 #' @format A data frame with 35430 rows and 5 variables:
 #' \describe{
 #' \item{st_id}{id of the official stations}
 #' \item{date}{measurement date}
 #' \item{month}{measurement month}
-#' \item{irradiation}{daily solar irradiation in kWh/m2}
+#' \item{insolation}{daily solar insolation in kWh/m2}
 #' \item{tmean}{daily mean air temperature}
 #' }
 "rad_longterm"
