@@ -60,13 +60,13 @@ The topoclim package includes the following datasets:
 -   **validation\_stations:** A SpatialPointsDataFrame with the location
     of the validation stations
 -   **timeseries:** A table with daily measurements of mean temperature
-    and solar irradiation from the official stations for the period 2017
+    and solar insolation from the official stations for the period 2017
     until 2019
 -   **rad\_longterm:** A table with daily measurements of solar
-    irradiation for seven stations for several years (up to 32 years)
--   **h\_topo:** A RasterStack with incoming solar irradiation in kWh/m²
+    insolation for seven stations for several years (up to 32 years)
+-   **h\_topo:** A RasterStack with incoming solar insolation in kWh/m²
     for the study area for each month with a resolution of 100m
--   **h\_flat:** A RasterStack with incoming solar irradiation in kWh/m²
+-   **h\_flat:** A RasterStack with incoming solar insolation in kWh/m²
     for the study area using constant values of 0 for slope and aspect
     (e.g. on a flat surface) for each month with a resolution of 100m
 -   **dem:** A digital elevation model of the study area with a
@@ -110,10 +110,10 @@ h_flat <- h_flat[[test_month]]
 
 <div class="figure">
 
-<img src="man/figures/readme-h-topo-flat-1.png" alt="Incoming solar irradiation during April with and without consideration of aspect and slope." width="90%" />
+<img src="man/figures/readme-h-topo-flat-1.png" alt="Incoming solar insolation during April with and without consideration of aspect and slope." width="90%" />
 <p class="caption">
-Incoming solar irradiation during April with and without consideration
-of aspect and slope.
+Incoming solar insolation during April with and without consideration of
+aspect and slope.
 </p>
 
 </div>
@@ -172,20 +172,14 @@ Predictions from the lapse-rate model for two example days during April
 ### Relative Radiation Factor
 
 The relative radiation factor is defined as the ratio between incoming
-solar irradiation on an inclined and flat surface:
+solar insolation on an inclined and flat surface:
 
-![\\Delta\_{rad} = \\frac{h\_{topo}}{h\_{flat}}](https://latex.codecogs.com/png.latex?%5CDelta_%7Brad%7D%20%3D%20%5Cfrac%7Bh_%7Btopo%7D%7D%7Bh_%7Bflat%7D%7D "\Delta_{rad} = \frac{h_{topo}}{h_{flat}}")
+d\_rad = h\_topo / h\_flat
 
-We can therefore calculate
-![\\Delta\_{rad}](https://latex.codecogs.com/png.latex?%5CDelta_%7Brad%7D "\Delta_{rad}")
-by dividing the raster objects
-![h\_{topo}](https://latex.codecogs.com/png.latex?h_%7Btopo%7D "h_{topo}")
-and
-![h\_{flat}](https://latex.codecogs.com/png.latex?h_%7Bflat%7D "h_{flat}").
-Because
-![h\_{flat}](https://latex.codecogs.com/png.latex?h_%7Bflat%7D "h_{flat}")
-contains some unrealistic jumps in pixel values on ridges and mountain
-tops, it is first smoothed using a 5x5 pixel filter.
+We can therefore calculate `d_rad` by dividing the raster objects
+`h_topo` and `h_flat`. Because `h_flat` contains some unrealistic jumps
+in pixel values on ridges and mountain tops, it is first smoothed using
+a 5x5 pixel filter.
 
 ``` r
 h_flat2 <- focal(h_flat, w = matrix(1, 5, 5), fun = mean)
@@ -203,26 +197,25 @@ Relative radiation during April.
 
 ### Cloud Index
 
-The cloud index ![c](https://latex.codecogs.com/png.latex?c "c") can be
-calculated using the following formula:
+The cloud index `c` can be calculated using the following formula:
 
-![c = \\frac{h\_{obs} - h\_{cloud}}{h\_{clear} - h\_{cloud}}](https://latex.codecogs.com/png.latex?c%20%3D%20%5Cfrac%7Bh_%7Bobs%7D%20-%20h_%7Bcloud%7D%7D%7Bh_%7Bclear%7D%20-%20h_%7Bcloud%7D%7D "c = \frac{h_{obs} - h_{cloud}}{h_{clear} - h_{cloud}}")
+c = ( h\_obs - h\_cloud ) / ( h\_clear - h\_cloud )
 
 The first step is to calculate monthly reference values for maximum and
-minimum solar irradiation. The maximum reference solar irradiation is
-defined as the mean of all irradiation measurements above the 95%
-quantile and the minimum reference irradiation as the mean of all
-irradiation measurements below the 95% quantile. Outliers were already
+minimum solar insolation. The maximum reference solar insolation is
+defined as the mean of all insolation measurements above the 95%
+quantile and the minimum reference insolation as the mean of all
+insolation measurements below the 95% quantile. Outliers were already
 removed from this dataset using a 3-sigma test.
 
 ``` r
-h_clear_monthly <- aggregate(list(h_clear = rad_longterm$irradiation),
+h_clear_monthly <- aggregate(list(h_clear = rad_longterm$insolation),
                              by = rad_longterm[c('st_id', 'month')],
                              FUN = function(x){
                                mean(x[x >= quantile(x, .95, na.rm = T)], na.rm = T)
                              })
 
-h_cloud_monthly <- aggregate(list(h_cloud = rad_longterm$irradiation),
+h_cloud_monthly <- aggregate(list(h_cloud = rad_longterm$insolation),
                              by = rad_longterm[c('st_id', 'month')],
                              FUN = function(x){
                                mean(x[x <= quantile(x, .05, na.rm = T)], na.rm = T)
@@ -230,13 +223,10 @@ h_cloud_monthly <- aggregate(list(h_cloud = rad_longterm$irradiation),
 h_ref_month <- merge(h_clear_monthly, h_cloud_monthly, by = c('st_id', 'month'))
 ```
 
-From the monthly reference values, the daily reference values
-![h\_{clear}](https://latex.codecogs.com/png.latex?h_%7Bclear%7D "h_{clear}")
-and
-![h\_{cloud}](https://latex.codecogs.com/png.latex?h_%7Bcloud%7D "h_{cloud}")
-are estimated via linear interpolation for every station. This can be
-accomplished using the function `complete_ts()`, which is included in
-this package. Internally, the function uses the function
+From the monthly reference values, the daily reference values `h_clear`
+and `h_cloud` are estimated via linear interpolation for every station.
+This can be accomplished using the function `complete_ts()`, which is
+included in this package. Internally, the function uses the function
 `na_interpolation()` from the package `imputeTS`.
 
 ``` r
@@ -246,10 +236,7 @@ h_ref <- lapply(h_ref_split, complete_ts)
 h_ref <- do.call(rbind, h_ref)
 ```
 
-Because there are only small differences for
-![h\_{clear}](https://latex.codecogs.com/png.latex?h_%7Bclear%7D "h_{clear}")
-and
-![h\_{cloud}](https://latex.codecogs.com/png.latex?h_%7Bcloud%7D "h_{cloud}")
+Because there are only small differences for `h_clear` and `h_cloud`
 between the single stations, the average values across all stations is
 used to calculate the cloud index:
 
@@ -259,11 +246,10 @@ h_ref <- aggregate(h_ref[c('h_clear', 'h_cloud')],
                    FUN = mean)
 ```
 
-![h\_{obs}](https://latex.codecogs.com/png.latex?h_%7Bobs%7D "h_{obs}")
-is calculated by using ordinary kriging together with the observed
-irradiation from all the official stations. The packages `gstat` and
-`automap` are used to perform the kriging. This step can take some time
-to calculate (ca. 30s per day)
+`h_obs` is calculated by using ordinary kriging together with the
+observed insolation from all the official stations. The packages `gstat`
+and `automap` are used to perform the kriging. This step can take some
+time to calculate (ca. 30s per day)
 
 ``` r
 krige_split <- lapply(timeseries_split, merge, x = official_stations, by = 'st_id', all.y = T)
@@ -272,14 +258,14 @@ krige_split <- lapply(timeseries_split, merge, x = official_stations, by = 'st_i
 ``` r
 h_var <- lapply(krige_split, function(x) {
   
-  var <- automap::autofitVariogram(formula = irradiation ~ 1,
+  var <- automap::autofitVariogram(formula = insolation ~ 1,
                                    input_data = x)
   return(var$var_model)
   
 })
 
 h_fit <- mapply(gstat::gstat, data = krige_split, model = h_var,
-                MoreArgs = list(g = NULL, id = 'insol', formula = irradiation ~ 1),
+                MoreArgs = list(g = NULL, id = 'insol', formula = insolation ~ 1),
                 SIMPLIFY = F)
 
 h_obs <- lapply(h_fit, raster::interpolate, object = dem)
@@ -293,15 +279,10 @@ names(h_obs) <- names(krige_split)
 
 In the last step, the cloud index is computed. In the present example,
 we only consider the month of April. There can be some pixels, where the
-interpolated value
-![h\_{obs}](https://latex.codecogs.com/png.latex?h_%7Bobs%7D "h_{obs}")
-is higher or lower than our reference values
-![h\_{clear}](https://latex.codecogs.com/png.latex?h_%7Bclear%7D "h_{clear}")
-and
-![h\_{cloud}](https://latex.codecogs.com/png.latex?h_%7Bcloud%7D "h_{cloud}"),
-respectively. This would lead to cloud index values above one or below
-zero. To avoid this, values above one are assigned a value of one, and
-values below zero a value of zero.
+interpolated value `h_obs` is higher or lower than our reference values
+`h_clear` and `h_cloud`, respectively. This would lead to cloud index
+values above one or below zero. To avoid this, values above one are
+assigned a value of one, and values below zero a value of zero.
 
 ``` r
 h_ref_sub <- subset(h_ref, month == test_month)
@@ -329,12 +310,12 @@ The cloud index for two example days during April 2019.
 The relative radiation factor and cloud index are both combined to the
 radiation correction factor:
 
-![ \\delta\_{rad} = c \* \\Delta\_{rad} - c](https://latex.codecogs.com/png.latex?%20%5Cdelta_%7Brad%7D%20%3D%20c%20%2A%20%5CDelta_%7Brad%7D%20-%20c " \delta_{rad} = c * \Delta_{rad} - c")
+D\_rad = c \* d\_rad - c
 
 ``` r
-rcf <- c * d_rad - c
+D_rad <- c * d_rad - c
 
-names(rcf) <- names(krige_split)
+names(D_rad) <- names(krige_split)
 ```
 
 <div class="figure">
@@ -352,19 +333,17 @@ Topoclimatic air temperature is calculated by combining the predictions
 from the lapse-rate model with the radiation correction factor, using
 the following formula:
 
-![t\_{topo} = t\_{flat} + (\\Delta\_{rad} \* m\_{rad} \* \|t\_{flat}\|)](https://latex.codecogs.com/png.latex?t_%7Btopo%7D%20%3D%20t_%7Bflat%7D%20%2B%20%28%5CDelta_%7Brad%7D%20%2A%20m_%7Brad%7D%20%2A%20%7Ct_%7Bflat%7D%7C%29 "t_{topo} = t_{flat} + (\Delta_{rad} * m_{rad} * |t_{flat}|)")
+t\_topo = t\_flat + ( D\_rad \* m\_rad \* \|t\_flat\| )
 
-![m\_{rad}](https://latex.codecogs.com/png.latex?m_%7Brad%7D "m_{rad}")
-is an empirical relationship between air temperature and incoming solar
-radiation and describes the change in local air temperature by an
-increase/decrease of incoming solar radiation.
-![m\_{rad}](https://latex.codecogs.com/png.latex?m_%7Brad%7D "m_{rad}")
+`m_rad` is an empirical relationship between air temperature and
+incoming solar radiation and describes the change in local air
+temperature by an increase/decrease of incoming solar radiation. `m_rad`
 is defined as the slope of the linear regression between observed air
-temperature and solar irradiation from the official stations with a long
+temperature and solar insolation from the official stations with a long
 timeseries.
 
 ``` r
-rad_mean <- aggregate(list(rad_mean = rad_longterm$irradiation),
+rad_mean <- aggregate(list(rad_mean = rad_longterm$insolation),
                       by = rad_longterm['st_id'],
                       FUN = mean, na.rm = T)
 tair_mean <- aggregate(list(tmean_mean = rad_longterm$tmean),
@@ -374,7 +353,7 @@ tair_mean <- aggregate(list(tmean_mean = rad_longterm$tmean),
 perc_diff <- merge(rad_longterm, rad_mean, by = 'st_id', all.x = T)
 perc_diff <- merge(perc_diff, tair_mean, by = 'st_id', all.x = T)
 perc_diff$tmean_diff <- (perc_diff$tmean - perc_diff$tmean_mean) / perc_diff$tmean_mean
-perc_diff$rad_diff <- (perc_diff$irradiation - perc_diff$rad_mean) / perc_diff$rad_mean
+perc_diff$rad_diff <- (perc_diff$insolation - perc_diff$rad_mean) / perc_diff$rad_mean
 
 fit <- lm(tmean_diff ~ rad_diff, data = perc_diff)
 m_rad <- fit$coefficients['rad_diff']
@@ -384,13 +363,12 @@ round(m_rad, 2)
 #>     0.93
 ```
 
-![m\_{rad}](https://latex.codecogs.com/png.latex?m_%7Brad%7D "m_{rad}")
-amounts to 0.93, which means that a change of radiation by 1% changes
-local air temperature by 0.93%. Given this value, we can then calculate
-the final topoclimatic air temperature.
+`m_rad` amounts to 0.93, which means that a change of radiation by 1%
+changes local air temperature by 0.93%. Given this value, we can then
+calculate the final topoclimatic air temperature.
 
 ``` r
-t_topo <- t_flat + (rcf * m_rad * abs(t_flat))
+t_topo <- t_flat + (D_rad * m_rad * abs(t_flat))
 
 names(t_topo) <- names(krige_split)
 ```
