@@ -3,7 +3,7 @@
     -   [Overview](#overview)
     -   [Installation](#installation)
     -   [Included Datasets](#included-datasets)
-    -   [The cloud-corrected model](#the-cloud-corrected-model)
+    -   [Model Examples](#model-examples)
         -   [Lapse-rate model](#lapse-rate-model)
         -   [Relative Radiation Factor](#relative-radiation-factor)
         -   [Cloud Index](#cloud-index)
@@ -111,7 +111,7 @@ aspect and slope.
 
 </div>
 
-## The cloud-corrected model
+## Model Examples
 
 The following sections will illustrate the cloud-corrected model
 step-by-step. First, the calculation of the **lapse-rate model** is

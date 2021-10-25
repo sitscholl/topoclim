@@ -86,7 +86,7 @@ plot(h_topo, main = 'h_topo')
 plot(h_flat, main = 'h_flat')
 ```
 
-## The cloud-corrected model
+## Model Examples
 
 The following sections will illustrate the cloud-corrected model step-by-step. First, the calculation of the **lapse-rate model** is described, followed by the **relative radiation factor**, the **cloud index**, the **radiation correction factor** and, finally, the **cloud-corrected temperature**.
 
