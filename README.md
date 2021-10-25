@@ -3,12 +3,12 @@
     -   [Overview](#overview)
     -   [Installation](#installation)
     -   [Included Datasets](#included-datasets)
-    -   [The topoclimate model](#the-topoclimate-model)
+    -   [The cloud-corrected model](#the-cloud-corrected-model)
         -   [Lapse-rate model](#lapse-rate-model)
         -   [Relative Radiation Factor](#relative-radiation-factor)
         -   [Cloud Index](#cloud-index)
         -   [Radiation correction factor](#radiation-correction-factor)
-        -   [Topoclima](#topoclima)
+        -   [Cloud-correted temperature](#cloud-correted-temperature)
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
@@ -18,18 +18,18 @@
 
 ## Overview
 
-This document describes the R-package **topoclim**. The document
-presents a series of calculations that allow to estimate fine-scale
-climatic conditions in complex topography using a radiation correction
-factor. Through this radiation correction factor, the effects of slope,
-aspect, cloud cover and solar position on local air temperature are
-accounted for. The principles of the approach are illustrated by
-applying the model to South Tyrol, a mountainous study area in the inner
-alps, during April 2019. The time-period for the interpolation can be
-changed by adjusting the parameters in the following script.
-Additionally, we also provide the results from our validation, including
-the comparison between measured and modeled air temperature and the
-comparison between observed and modeled phenological timing.
+This document describes the R-package **topoclim**, which was originally
+published in the article *Tscholl et al. (2021), Coupling solar
+radiation and cloud cover data for enhanced temperature predictions over
+topographically complex mountain terrain. International Journal of
+Climatology, under review*. The package presents an innovative method to
+estimate air temperature at high spatiotemporal resolution over complex
+mountain terrain, called the cloud-corrected model. The cloud-corrected
+model uses a correction factor to include the effects of slope, aspect,
+cloud cover and solar position on local air temperature estimates. The
+following document illustrates the principles of the approach by
+applying it to South Tyrol, a mountainous study area in the inner alps,
+during April 2019.
 
 ## Installation
 
@@ -57,8 +57,6 @@ The topoclim package includes the following datasets:
 
 -   **official\_stations:** A SpatialPointsDataFrame with the location
     of the official stations
--   **validation\_stations:** A SpatialPointsDataFrame with the location
-    of the validation stations
 -   **timeseries:** A table with daily measurements of mean temperature
     and solar insolation from the official stations for the period 2017
     until 2019
@@ -71,15 +69,10 @@ The topoclim package includes the following datasets:
     (e.g. on a flat surface) for each month with a resolution of 100m
 -   **dem:** A digital elevation model of the study area with a
     resolution of 100m
--   **validation\_tair:** A DataFrame with measured air temperature from
-    the validation stations and modeled air temperature from the
-    lapse-rate and topoclimate models
--   **validation\_phenology:** A DataFrame with results from the
-    phenological surveys and modeled phenological timing
 
 Use the syntax `?DatasetName` (e.g. `?official_stations`) to get more
 information about a certain dataset. The following code imports some of
-these datasets, that are required to run the topoclimate model.
+these datasets, that are required to run the cloud-corrected model.
 
 ``` r
 data("official_stations")
@@ -118,13 +111,13 @@ aspect and slope.
 
 </div>
 
-## The topoclimate model
+## The cloud-corrected model
 
-The following sections will illustrate the topoclimate model
+The following sections will illustrate the cloud-corrected model
 step-by-step. First, the calculation of the **lapse-rate model** is
 described, followed by the **relative radiation factor**, the **cloud
 index**, the **radiation correction factor** and, finally, the
-**topoclimate air temperature**.
+**cloud-corrected temperature**.
 
 <img src="man/figures/flowchart.png" width="90%" />
 
@@ -327,11 +320,11 @@ The radiation correction factor for two example days during April 2019.
 
 </div>
 
-### Topoclima
+### Cloud-correted temperature
 
-Topoclimatic air temperature is calculated by combining the predictions
-from the lapse-rate model with the radiation correction factor, using
-the following formula:
+Cloud-corrected air temperature is calculated by combining the
+predictions from the lapse-rate model with the radiation correction
+factor, using the following formula:
 
 t\_topo = t\_flat + ( D\_rad \* m\_rad \* \|t\_flat\| )
 
@@ -365,7 +358,7 @@ round(m_rad, 2)
 
 `m_rad` amounts to 0.93, which means that a change of radiation by 1%
 changes local air temperature by 0.93%. Given this value, we can then
-calculate the final topoclimatic air temperature.
+calculate the final cloud-corrected air temperature.
 
 ``` r
 t_topo <- t_flat + (D_rad * m_rad * abs(t_flat))
@@ -375,9 +368,9 @@ names(t_topo) <- names(krige_split)
 
 <div class="figure">
 
-<img src="man/figures/readme-topoclim-1.png" alt="Topoclimatic air temperature for two example days during April 2019." width="90%" />
+<img src="man/figures/readme-topoclim-1.png" alt="Cloud-corrected air temperature for two example days during April 2019." width="90%" />
 <p class="caption">
-Topoclimatic air temperature for two example days during April 2019.
+Cloud-corrected air temperature for two example days during April 2019.
 </p>
 
 </div>
